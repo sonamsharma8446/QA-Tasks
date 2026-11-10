@@ -1,0 +1,227 @@
+{
+  "name": "github trending repository morning brief",
+  "nodes": [
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "hours",
+              "triggerAtMinute": 45
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.4,
+      "position": [
+        0,
+        0
+      ],
+      "id": "d06df9f8-c82c-488b-9474-94c16697903c",
+      "name": "Schedule Trigger"
+    },
+    {
+      "parameters": {
+        "url": "https://api.github.com/search/repositories?q=stars%3A%3E1000&sort=stars&order=desc&per_page=5",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.5,
+      "position": [
+        224,
+        0
+      ],
+      "id": "47d9086a-294c-499f-8def-1b83b83310d8",
+      "name": "HTTP Request",
+      "retryOnFail": true,
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "jsCode": "\nconst response = $input.first().json;\nconst repos = response.items || [];\n\nreturn repos\n  .sort((a, b) => b.stargazers_count - a.stargazers_count)\n  .slice(0, 5)\n  .map(repo => ({\n    json: {\n      name: repo.name,\n      full_name: repo.full_name,\n      description: repo.description,\n      stars: repo.stargazers_count,\n      url: repo.html_url,\n      owner: repo.owner.login\n    }\n  }));\n"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        432,
+        0
+      ],
+      "id": "18471467-6a05-456b-8fe5-f992dd0b2d3e",
+      "name": "Code in JavaScript"
+    },
+    {
+      "parameters": {
+        "url": "=https://api.github.com/repos/{{ $json.owner }}/{{ $json.name }}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.5,
+      "position": [
+        656,
+        0
+      ],
+      "id": "8eb3582c-79ee-4df7-8b26-0c717e8ec24e",
+      "name": "HTTP Request1",
+      "retryOnFail": true,
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 4
+          },
+          "conditions": [
+            {
+              "id": "115046fc-aeb6-4447-b301-fe7ae1f7e477",
+              "leftValue": "={{ $json.stargazers_count }}",
+              "rightValue": 1000,
+              "operator": {
+                "type": "number",
+                "operation": "gt"
+              }
+            },
+            {
+              "id": "813bef1f-fc16-4f31-9ea3-8e1541ea2b83",
+              "leftValue": "",
+              "rightValue": "",
+              "operator": {
+                "type": "string",
+                "operation": "equals",
+                "name": "filter.operator.equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.4,
+      "position": [
+        880,
+        0
+      ],
+      "id": "45b49832-ea63-4202-9bd5-0c7d6da720d2",
+      "name": "If"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://discord.com/api/webhooks/1569732579429716030/1K76eSBv07ab8WiZPh9S2fU6z71pFi4CuIOx8L51ldSwg8ZJtrJ0en6mGK_Bwq9y5iYi",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"content\": \"🔥 HIGH PRIORITY GITHUB ALERT!\\n\\nRepository: {{ $json.full_name }}\\nStars: {{ $json.stargazers_count }}\\nForks: {{ $json.forks_count }}\\nURL: {{ $json.html_url }}\"\n}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.5,
+      "position": [
+        1104,
+        -96
+      ],
+      "id": "f7d51429-826b-409a-aa04-9e935d76ef19",
+      "name": "HTTP Request2"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://discord.com/api/webhooks/1569732579429716030/1K76eSBv07ab8WiZPh9S2fU6z71pFi4CuIOx8L51ldSwg8ZJtrJ0en6mGK_Bwq9y5iYi",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "{\n  \"content\": \"📊 Regular GitHub Update\\n\\nRepository: {{ $json.full_name }}\\nStars: {{ $json.stargazers_count }}\\nURL: {{ $json.html_url }}\"\n}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.5,
+      "position": [
+        1104,
+        96
+      ],
+      "id": "62c9814c-2a95-4af6-9fcc-6849c32bd6bb",
+      "name": "HTTP Request3"
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Schedule Trigger": {
+      "main": [
+        [
+          {
+            "node": "HTTP Request",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "HTTP Request": {
+      "main": [
+        [
+          {
+            "node": "Code in JavaScript",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code in JavaScript": {
+      "main": [
+        [
+          {
+            "node": "HTTP Request1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "HTTP Request1": {
+      "main": [
+        [
+          {
+            "node": "If",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "If": {
+      "main": [
+        [
+          {
+            "node": "HTTP Request2",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "HTTP Request3",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate"
+  },
+  "versionId": "168162d1-df69-4e87-be79-288ba34371c5",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "dae7e87a70b0709e2e1a5a07cd7a1f3ce3079421786f7d5232bc5eb6523e572f"
+  },
+  "nodeGroups": [],
+  "id": "5dOElWaTh5iuoN1j",
+  "tags": []
+}
